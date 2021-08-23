@@ -4,7 +4,7 @@ Sample code for [Figma DIY: Building a color system plugin](https://evilmartians
 
 
 ## To-do list
-- [ ] Create source color tokens object
+- [x] Create source color tokens object
 - [ ] Add dropdown to select color token
 - [ ] Display color
 - [ ] Prevent auto refresh of color when run plugin

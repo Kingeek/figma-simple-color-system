@@ -16,11 +16,17 @@ function getReceiverSourcePairs(styles) {
   }));
 }
 
+// Filter out color by "Source" colors
+function excludeSourceColors(styles) {
+  return styles.filter(style => !style.name.includes('Source/'))
+}
+
 // Main plugin code
 figma.showUI(__html__);
 
 const styles = figma.getLocalPaintStyles();
-const receiverSourcePairs = getReceiverSourcePairs(styles);
+const filteredColor = excludeSourceColors(styles);
+const receiverSourcePairs = getReceiverSourcePairs(filteredColor);
 
 // New! Make sure to update paints  on plugin launch
 receiverSourcePairs.forEach((pair) => {
