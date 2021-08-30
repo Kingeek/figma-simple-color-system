@@ -7,6 +7,15 @@
     line-height: 14px;
   }
 
+  .chip {
+    border: 1px solid grey;
+    margin-right: 5px;
+    flex: none;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+  }
+
   #styles-list {
     margin: 0;
     padding: 8px 0;
@@ -63,46 +72,60 @@
 <ul id="styles-list"></ul>
 
 <script>
-  function markupRow(receiverSourceData) {
-    return `<li class="styles-row">
+function markupRow(receiverSourceData, colorSources) {
+  function selectedOption(color) {
+    if (receiverSourceData.receiver.description != '' && receiverSourceData.receiver.description == color.name) {
+      return "selected"
+    }
+    return ""
+  }
+
+  const options = colorSources.map((color) => {
+    return `<option value="${color.name}" ${selectedOption(color)}>${color.name.replace("Source/","")}</option>`
+  })
+
+  const chipColor = `background-color:rgba(${Math.floor(receiverSourceData.receiver.paints[0].color.r * 255)},${Math.floor(receiverSourceData.receiver.paints[0].color.g * 255)},${Math.floor(receiverSourceData.receiver.paints[0].color.b * 255)},${receiverSourceData.receiver.paints[0].opacity});`
+  // <div class="chip" style="${chipColor}"></div>
+
+  return `
+  <li class="styles-row">
     <span class="style-receiver flexible-width">${receiverSourceData.receiver.name}</span>
     <span class="assign-operator fixed-width"> = </span>
-    <input
-      class="style-source-input flexible-width"
-      type="text"
-      placeholder="None"
-      value="${receiverSourceData.source.name}"
-      data-receiver-id="${receiverSourceData.receiver.id}"
-    >
+    <select class="style-source-input flexible-width" data-receiver-id="${receiverSourceData.receiver.id}">
+     ${options}
+    <select>
   </li>`;
-  }
+}
 
-  function handleTextFieldChange(event) {
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "update-source",
-          newSourceName: event.target.value,
-          receiverId: event.target.dataset.receiverId,
-        },
+function handleTextFieldChange(event) {
+  parent.postMessage(
+    {
+      pluginMessage: {
+        type: "update-source",
+        newSourceName: event.target.value,
+        receiverId: event.target.dataset.receiverId,
       },
-      "*"
+    },
+    "*"
+  );
+}
+
+const stylesListElement = document.getElementById("styles-list");
+stylesListElement.addEventListener("change", handleTextFieldChange);
+
+onmessage = ({ data: { pluginMessage } }) => {
+  const messageType = pluginMessage.type;
+
+  if (messageType === "render") {
+    const colorSources = pluginMessage.colorSourcesData;
+    const rowHTML = pluginMessage.receiverSourceData.reduce(
+      (resultString, pair) => resultString + markupRow(pair, colorSources),
+      ""
     );
+    stylesListElement.innerHTML = rowHTML;
   }
-
-  const stylesListElement = document.getElementById("styles-list");
-  stylesListElement.addEventListener("change", handleTextFieldChange);
-
-  onmessage = ({ data: { pluginMessage } }) => {
-    const messageType = pluginMessage.type;
-
-    if (messageType === "render") {
-      const stylesNames = pluginMessage.receiverSourceData;
-      const rowHTML = pluginMessage.receiverSourceData.reduce(
-        (resultString, pair) => resultString + markupRow(pair),
-        ""
-      );
-      stylesListElement.innerHTML = rowHTML;
-    }
-  };
+  else if (message.quit) {
+    figma.closePlugin();
+  }
+};
 </script>

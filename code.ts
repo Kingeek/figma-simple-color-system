@@ -1,53 +1,61 @@
 // Helpers
+function getColorSources(styles) {
+  return styles.filter(style => style.name.startsWith('Source/'))
+}
 
-// Look at all styles' descriptions to find a matching source style and return if found
-function getSourceForStyle(style, styles) {
-  for (const currentStyle of styles) {
+function getColorReceivers(styles) {
+  return styles.filter(style => !style.name.startsWith('Source/'))
+}
+
+function getReceiverSourcePairs(colorReceivers, colorSources) {
+  return colorReceivers.map((style) => ({
+    receiver: style,
+    source: getSourceForStyle(style, colorSources),
+  }));
+}
+
+function getSourceForStyle(style, colorSources) {
+  for (const currentStyle of colorSources) {
     if (style.description === currentStyle.name) return currentStyle;
   }
   return null;
 }
 
-// Form pairs
-function getReceiverSourcePairs(styles) {
-  return styles.map((style) => ({
-    receiver: style,
-    source: getSourceForStyle(style, styles),
-  }));
-}
-
-// Filter out color by "Source" colors
-function excludeSourceColors(styles) {
-  return styles.filter(style => !style.name.includes('Source/'))
-}
-
 // Main plugin code
-figma.showUI(__html__);
+figma.showUI(__html__, {width: 400});
 
-const styles = figma.getLocalPaintStyles();
-const filteredColor = excludeSourceColors(styles);
-const receiverSourcePairs = getReceiverSourcePairs(filteredColor);
-
-// New! Make sure to update paints  on plugin launch
-receiverSourcePairs.forEach((pair) => {
-  if (pair.source) {
-    pair.receiver.paints = pair.source.paints;
-  }
-});
-
+const styles = figma.getLocalPaintStyles()
+const colorSources = getColorSources(styles)
+const colorReceivers = getColorReceivers(styles)
+const receiverSourcePairs = getReceiverSourcePairs(colorReceivers, colorSources);
 const receiverSourceData = receiverSourcePairs.map((pair) => ({
   receiver: {
     name: pair.receiver.name,
     id: pair.receiver.id,
+    paints: pair.receiver.paints,
+    description: pair.receiver.description
   },
   source: {
     name: pair.source ? pair.source.name : "",
   },
 }));
 
+const colorSourcesData = colorSources.map((pair) => ({
+  name: pair.name,
+  id: pair.id,
+  paints: pair.paints
+}));
+
+receiverSourcePairs.forEach((pair) => {
+  if (pair.source) {
+    pair.receiver.paints = pair.source.paints;
+  }
+});
+
 figma.ui.postMessage({
   type: "render",
   receiverSourceData,
+  colorSourcesData,
 });
 
 // Handle message from UI
@@ -62,6 +70,6 @@ figma.ui.onmessage = (msg) => {
     receiverStyle.description = msg.newSourceName;
     receiverStyle.paints = sourceStyle.paints;
 
-    figma.notify(`New source style: ${msg.newSourceName}`);
+    figma.notify(`New source style: ${msg.newSourceName.replace('Source/',"")}`);
   }
 };
